@@ -1,5 +1,44 @@
-import { AppState, SimMsg, SimIntent } from "../lib/types";
-import { COST_PER_TOKEN_USD } from "../lib/constants";
+// Inline types for worker (cannot import from lib in worker context)
+interface ProjectMetrics {
+  active_agents: number;
+  total_tokens: number;
+  total_spend_usd: number;
+  live_tps: number;
+  live_spend_per_s: number;
+  completion_rate: number;
+}
+
+interface AppState {
+  items: Record<string, any>;
+  agents: Record<string, any>;
+  metrics: ProjectMetrics;
+  seed: string;
+  running: boolean;
+}
+
+type SimIntent =
+  | { type: "set_running"; running: boolean }
+  | { type: "set_plan"; plan: "Calm" | "Rush" | "Web" }
+  | { type: "set_seed"; seed: string }
+  | { type: "set_speed"; speed: number }
+  | { type: "request_snapshot" };
+
+type SimMsg =
+  | { type: "snapshot"; state: AppState }
+  | {
+      type: "tick";
+      tick_id: number;
+      items?: any[];
+      agents?: any[];
+      metrics?: Partial<ProjectMetrics>;
+    }
+  | { type: "deps_cleared"; id: string }
+  | { type: "start_item"; id: string; agent: any }
+  | { type: "complete_item"; id: string };
+
+// Constants
+const COST_PER_TOKEN_USD = 0.000002;
+const TICK_INTERVAL_MS = 50;
 
 let state: AppState = {
   items: {},
@@ -13,7 +52,7 @@ let state: AppState = {
     completion_rate: 0,
   },
   seed: "default",
-  running: true,
+  running: false,
 };
 
 let tickId = 0;
@@ -32,7 +71,7 @@ function initState(): void {
       completion_rate: 0,
     },
     seed: "default",
-    running: true,
+    running: false,
   };
   tickId = 0;
 }
@@ -48,21 +87,21 @@ function sendSnapshot(): void {
 function tick(): void {
   if (!state.running) return;
 
-  // In Phase 0, just a stub tick
+  // Phase 1: Stub tick with empty items/agents
   // Phase 2 will implement real item/agent logic
 
   tickId++;
 
-  // Recalculate metrics
+  // Recalculate metrics (stub values for Phase 1)
   state.metrics.active_agents = Object.keys(state.agents).length;
-  state.metrics.total_spend_usd = state.metrics.total_tokens * COST_PER_TOKEN_USD;
-  state.metrics.live_spend_per_s = state.metrics.live_tps * COST_PER_TOKEN_USD;
+  state.metrics.total_spend_usd =
+    state.metrics.total_tokens * COST_PER_TOKEN_USD;
+  state.metrics.live_spend_per_s =
+    state.metrics.live_tps * COST_PER_TOKEN_USD;
 
   const msg: SimMsg = {
     type: "tick",
     tick_id: tickId,
-    items: [],
-    agents: [],
     metrics: state.metrics,
   };
   self.postMessage(msg);
@@ -70,7 +109,7 @@ function tick(): void {
 
 function startTicking(): void {
   if (tickIntervalId !== null) return;
-  tickIntervalId = setInterval(tick, 50); // 20 Hz
+  tickIntervalId = setInterval(tick, TICK_INTERVAL_MS);
 }
 
 function stopTicking(): void {
@@ -115,5 +154,6 @@ self.onmessage = (event: MessageEvent<SimIntent>) => {
 
 // Initialize and send snapshot on startup
 initState();
+state.running = true;
 sendSnapshot();
 startTicking();
