@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
-
 * {
   box-sizing: border-box;
 }
@@ -16,7 +14,7 @@ body {
   padding: 0;
   background: #000000;
   color: #ffffff;
-  font-family: "JetBrains Mono", "IBM Plex Mono", "Courier New", monospace;
+  font-family: var(--font-jetbrains-mono), "IBM Plex Mono", "Courier New", monospace;
   overflow: hidden;
   letter-spacing: 0.05em;
   

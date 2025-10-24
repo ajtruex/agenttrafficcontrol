@@ -8,12 +8,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        mono: [
-          "JetBrains Mono",
-          "IBM Plex Mono",
-          "Courier New",
-          "monospace",
-        ],
+        mono: "var(--font-jetbrains-mono), IBM Plex Mono, Courier New, monospace",
       },
       colors: {
         // Terminal theme
