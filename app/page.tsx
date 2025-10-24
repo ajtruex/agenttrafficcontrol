@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MetricsBar } from "@/components/MetricsBar";
 import { WorkTable } from "@/components/WorkTable";
 import { ControlBar } from "@/components/ControlBar";
+import { RadarCanvas } from "@/components/RadarCanvas";
 
 export default function Home() {
   const transportRef = useRef<WorkerTransport | null>(null);
@@ -56,42 +57,52 @@ export default function Home() {
   };
 
   return (
-    <main className="w-full h-full flex flex-col bg-terminal-black font-mono">
-      {/* Header */}
-      <div className="border-terminal bg-terminal-gray-darker border-b px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1
-            className="text-xl font-bold uppercase text-terminal-amber"
-            style={{ textShadow: "0 0 10px rgba(255, 176, 0, 0.6)" }}
+    <main className="w-full h-screen flex flex-col bg-terminal-black font-mono relative overflow-hidden">
+      {/* Radar Canvas (fullscreen background) */}
+      <RadarCanvas />
+
+      {/* Overlay container with pointer-events control */}
+      <div className="absolute inset-0 pointer-events-none flex flex-col">
+        {/* Header */}
+        <div className="border-terminal bg-terminal-gray-darker border-b px-6 py-4 flex items-center justify-between pointer-events-auto">
+          <div>
+            <h1
+              className="text-xl font-bold uppercase text-terminal-amber"
+              style={{ textShadow: "0 0 10px rgba(255, 176, 0, 0.6)" }}
+            >
+              CALMING CONTROL ROOM
+            </h1>
+            <p className="text-xs text-terminal-gray-muted uppercase tracking-widest mt-1">
+              TICK: <span style={{ color: "#00FF00", textShadow: "0 0 6px rgba(0, 255, 0, 0.6)" }}>{tick_id}</span>
+            </p>
+          </div>
+
+          <Button
+            onClick={handleToggleRunning}
+            variant={running ? "destructive" : "secondary"}
+            style={{
+              textShadow:
+                running
+                  ? "0 0 8px rgba(255, 0, 0, 0.6)"
+                  : "0 0 8px rgba(0, 255, 0, 0.6)",
+            }}
           >
-            CALMING CONTROL ROOM
-          </h1>
-          <p className="text-xs text-terminal-gray-muted uppercase tracking-widest mt-1">
-            TICK: <span style={{ color: "#00FF00", textShadow: "0 0 6px rgba(0, 255, 0, 0.6)" }}>{tick_id}</span>
-          </p>
+            {running ? "PAUSE" : "RUN"}
+          </Button>
         </div>
 
-        <Button
-          onClick={handleToggleRunning}
-          variant={running ? "destructive" : "secondary"}
-          style={{
-            textShadow:
-              running
-                ? "0 0 8px rgba(255, 0, 0, 0.6)"
-                : "0 0 8px rgba(0, 255, 0, 0.6)",
-          }}
-        >
-          {running ? "PAUSE" : "RUN"}
-        </Button>
+        {/* Metrics Bar */}
+        <div className="pointer-events-auto">
+          <MetricsBar />
+        </div>
+
+        {/* Work Items Table (scrollable) */}
+        <div className="flex-1 overflow-y-auto pointer-events-auto">
+          <WorkTable />
+        </div>
       </div>
 
-      {/* Metrics Bar */}
-      <MetricsBar />
-
-      {/* Work Items Table */}
-      <WorkTable />
-
-      {/* Control Bar */}
+      {/* Control Bar (fixed position) */}
       <ControlBar />
     </main>
   );
