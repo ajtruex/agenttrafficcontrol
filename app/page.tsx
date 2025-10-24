@@ -6,6 +6,7 @@ import { WorkerTransport } from "@/lib/simBridge";
 import { Button } from "@/components/ui/button";
 import { MetricsBar } from "@/components/MetricsBar";
 import { WorkTable } from "@/components/WorkTable";
+import { ControlBar } from "@/components/ControlBar";
 
 export default function Home() {
   const transportRef = useRef<WorkerTransport | null>(null);
@@ -32,6 +33,13 @@ export default function Home() {
           applyTickDiff(msg.tick_id, diff);
         }
       });
+
+      // Parse URL seed parameter
+      const params = new URLSearchParams(window.location.search);
+      const urlSeed = params.get("seed");
+      if (urlSeed) {
+        sendIntent({ type: "set_seed", seed: urlSeed });
+      }
     } catch (err) {
       console.error("Failed to initialize worker:", err);
     }
@@ -41,7 +49,7 @@ export default function Home() {
         transportRef.current.terminate();
       }
     };
-  }, [setTransport, applySnapshot, applyTickDiff]);
+  }, [setTransport, applySnapshot, applyTickDiff, sendIntent]);
 
   const handleToggleRunning = () => {
     sendIntent({ type: "set_running", running: !running });
@@ -82,6 +90,9 @@ export default function Home() {
 
       {/* Work Items Table */}
       <WorkTable />
+
+      {/* Control Bar */}
+      <ControlBar />
     </main>
   );
 }

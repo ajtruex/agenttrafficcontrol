@@ -28,6 +28,10 @@ export class SeededRNG {
     return this.next() * (max - min) + min;
   }
 
+  nextBool(probability: number = 0.5): boolean {
+    return this.next() < probability;
+  }
+
   // Perlin-like noise using accumulated random walk
   perlin(t: number, scale: number = 0.1): number {
     const n = Math.floor(t / scale);

@@ -88,32 +88,38 @@ let state: AppState = {
 
 let tickId = 0;
 let tickIntervalId: NodeJS.Timeout | null = null;
-// let rng = createSeededRNG("default"); // Phase 3: use for deterministic TPS wobble
-// let lastStartAttempt = 0; // Phase 3: use for Poisson start cadence
+let rng: any = null;
+let currentPlan: "Calm" | "Rush" | "Web" = "Calm";
+let speedMultiplier = 1;
 
-// function createSeededRNG(seed: string) { // Phase 3: move to lib/rng.ts
-//   let hash = 0;
-//   for (let i = 0; i < seed.length; i++) {
-//     const char = seed.charCodeAt(i);
-//     hash = (hash << 5) - hash + char;
-//     hash = hash & hash;
-//   }
-//   let state = Math.abs(hash) || 1;
+function createSeededRNG(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  let state = Math.abs(hash) || 1;
 
-//   return {
-//     next: (): number => {
-//       let t = (state += 0x6d2b79f5);
-//       t = Math.imul(t ^ (t >>> 15), 1 | t);
-//       t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-//       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-//     },
-//     nextInt: (min: number, max: number): number => {
-//       const r = createSeededRNG("dummy").next();
-//       state = (state ^ (Math.floor(r * 10000) | 0)) >>> 0;
-//       return Math.floor(state / 4294967296 * (max - min + 1)) + min;
-//     },
-//   };
-// }
+  const rngObj = {
+    next: (): number => {
+      let t = (state += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), 1 | t);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    },
+    nextInt: (min: number, max: number): number => {
+      return Math.floor(rngObj.next() * (max - min + 1)) + min;
+    },
+    nextFloat: (min: number, max: number): number => {
+      return rngObj.next() * (max - min) + min;
+    },
+    nextBool: (probability: number = 0.5): boolean => {
+      return rngObj.next() < probability;
+    },
+  };
+  return rngObj;
+}
 
 function generateCalmPlan(): Record<string, WorkItem> {
   const items: Record<string, WorkItem> = {};
@@ -157,6 +163,120 @@ function generateCalmPlan(): Record<string, WorkItem> {
   return items;
 }
 
+function generateRushPlan(): Record<string, WorkItem> {
+  const items: Record<string, WorkItem> = {};
+
+  // 4 sectors with 7 items each, parallel branches
+  const sectors = ["Planning", "Build", "Eval", "Deploy"];
+
+  for (let s = 0; s < 4; s++) {
+    const sector = sectors[s];
+    const baseId = String.fromCharCode(65 + s); // A, B, C, D
+
+    // 7 items per sector, some with cross-sector deps
+    for (let i = 1; i <= 7; i++) {
+      const id = `${baseId}${i}`;
+      const deps: string[] = [];
+
+      // Chain within sector
+      if (i > 1) {
+        deps.push(`${baseId}${i - 1}`);
+      }
+
+      // Cross-sector dep from previous sector
+      if (s > 0 && i <= 3) {
+        const prevSector = String.fromCharCode(65 + s - 1);
+        deps.push(`${prevSector}${i}`);
+      }
+
+      items[id] = {
+        id,
+        group: baseId,
+        sector,
+        depends_on: deps,
+        estimate_ms: rng.nextInt(15000, 35000),
+        tps_min: rng.nextInt(8, 12),
+        tps_max: rng.nextInt(18, 28),
+        tps: rng.nextFloat(10, 20),
+        tokens_done: 0,
+        est_tokens: 0,
+        status: "queued",
+      };
+    }
+  }
+
+  return items;
+}
+
+function generateWebPlan(): Record<string, WorkItem> {
+  const items: Record<string, WorkItem> = {};
+
+  // Diamond topology: fan-out → join pattern
+  // Layers: 1 initial → 6 parallel → 1 converge → 1 final → 1 deploy
+  const layers = [
+    ["A1"],
+    ["B1", "B2", "B3", "C1", "C2", "C3"],
+    ["D1"],
+    ["E1"],
+    ["F1"],
+  ];
+
+  const sectors = ["Planning", "Build", "Eval", "Deploy", "Deploy"];
+
+  for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+    const layer = layers[layerIdx];
+    const sector = sectors[Math.min(layerIdx, sectors.length - 1)];
+
+    for (const id of layer) {
+      const deps: string[] = [];
+
+      // First layer has no deps
+      if (layerIdx === 0) {
+        deps.push();
+      }
+      // Fan-out: layer 1 depends on layer 0
+      else if (layerIdx === 1) {
+        deps.push("A1");
+      }
+      // Join: layer 2 depends on all of layer 1
+      else if (layerIdx === 2) {
+        deps.push(...layers[layerIdx - 1]);
+      }
+      // Linear thereafter
+      else {
+        deps.push(layers[layerIdx - 1][0]);
+      }
+
+      items[id] = {
+        id,
+        group: id.charAt(0),
+        sector,
+        depends_on: deps.filter((d) => !!d),
+        estimate_ms: rng.nextInt(20000, 45000),
+        tps_min: rng.nextInt(6, 10),
+        tps_max: rng.nextInt(14, 22),
+        tps: rng.nextFloat(8, 16),
+        tokens_done: 0,
+        est_tokens: 0,
+        status: "queued",
+      };
+    }
+  }
+
+  return items;
+}
+
+function generatePlan(plan: "Calm" | "Rush" | "Web"): Record<string, WorkItem> {
+  switch (plan) {
+    case "Calm":
+      return generateCalmPlan();
+    case "Rush":
+      return generateRushPlan();
+    case "Web":
+      return generateWebPlan();
+  }
+}
+
 function resolveEligible(items: Record<string, WorkItem>): Set<string> {
   const eligible = new Set<string>();
   const memo = new Map<string, boolean>();
@@ -193,9 +313,11 @@ function resolveEligible(items: Record<string, WorkItem>): Set<string> {
   return eligible;
 }
 
-function initState(): void {
+function initState(seed: string = "default", plan: "Calm" | "Rush" | "Web" = "Calm"): void {
+  currentPlan = plan;
+  rng = createSeededRNG(seed);
   state = {
-    items: generateCalmPlan(),
+    items: generatePlan(plan),
     agents: {},
     metrics: {
       active_agents: 0,
@@ -205,12 +327,10 @@ function initState(): void {
       live_spend_per_s: 0,
       completion_rate: 0,
     },
-    seed: "default",
+    seed,
     running: false,
   };
   tickId = 0;
-  // rng = createSeededRNG("default"); // Phase 3
-  // lastStartAttempt = 0; // Phase 3
 }
 
 function sendSnapshot(): void {
@@ -243,7 +363,9 @@ function tick(): void {
     (i) => i.status === "in_progress"
   ).length;
 
-  if (inProgressCount < MAX_CONCURRENT && Math.random() < 0.3) {
+  // Increase start probability with speed multiplier
+  const startProbability = Math.min(0.8, 0.3 * speedMultiplier);
+  if (inProgressCount < MAX_CONCURRENT && rng.next() < startProbability) {
     // Find an assigned item to start
     let started = false;
     for (const itemId in state.items) {
@@ -278,15 +400,15 @@ function tick(): void {
   for (const itemId in state.items) {
     const item = state.items[itemId];
     if (item.status === "in_progress" && item.started_at) {
-      // Simple TPS wobble (bounded)
-      const noise = (Math.random() - 0.5) * 2; // -1 to 1
+      // Dynamic TPS wobble using seeded RNG
+      const noise = (rng.next() - 0.5) * 2; // -1 to 1
       item.tps = Math.max(
         item.tps_min,
-        Math.min(item.tps_max, item.tps + noise * 0.5)
+        Math.min(item.tps_max, item.tps + noise * 0.8)
       );
 
-      // Accumulate tokens
-      item.tokens_done += item.tps * (TICK_INTERVAL_MS / 1000);
+      // Accumulate tokens with speed multiplier
+      item.tokens_done += item.tps * (TICK_INTERVAL_MS / 1000) * speedMultiplier;
 
       // Update ETA
       const elapsed = now - item.started_at;
@@ -374,15 +496,21 @@ function handleIntent(intent: SimIntent): void {
       break;
 
     case "set_plan":
-      // Phase 3: implement plan switching
+      initState(state.seed, intent.plan);
+      state.running = true;
+      sendSnapshot();
+      startTicking();
       break;
 
     case "set_seed":
-      state.seed = intent.seed;
+      initState(intent.seed, currentPlan);
+      state.running = true;
+      sendSnapshot();
+      startTicking();
       break;
 
     case "set_speed":
-      // Phase 3: implement speed multiplier
+      speedMultiplier = intent.speed;
       break;
 
     case "request_snapshot":
