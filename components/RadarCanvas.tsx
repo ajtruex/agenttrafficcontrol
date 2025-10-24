@@ -18,12 +18,18 @@ interface FlareState {
   startTime: number;
 }
 
+interface TrailPoint {
+  x: number;
+  y: number;
+  alpha: number;
+}
+
 export function RadarCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenRef = useRef<HTMLCanvasElement | null>(null);
   const completedRef = useRef<Set<string>>(new Set());
   const radarStateRef = useRef<{
-    agents: Map<string, { x: number; y: number; angle: number; progress: number }>;
+    agents: Map<string, { x: number; y: number; angle: number; progress: number; trail: TrailPoint[] }>;
     flares: FlareState[];
     lastFrameTime: number;
   }>({
@@ -103,16 +109,18 @@ export function RadarCanvas() {
       }
     }
 
-    // Center checkbox
-    const checkboxSize = 16;
-    ctx.strokeStyle = "#999999";
-    ctx.lineWidth = 2;
+    // Center checkbox (subtle outlined square)
+    const checkboxSize = 14;
+    ctx.strokeStyle = "#666666";
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.6;
     ctx.strokeRect(
       centerX - checkboxSize / 2,
       centerY - checkboxSize / 2,
       checkboxSize,
       checkboxSize
     );
+    ctx.globalAlpha = 1;
   };
 
   const getAgentColor = (workItemId: string): string => {
@@ -162,6 +170,7 @@ export function RadarCanvas() {
           y: Math.sin(angle) * maxRadius,
           angle,
           progress: 0,
+          trail: [],
         };
         radarStateRef.current.agents.set(agentId, radarAgent);
       }
@@ -177,8 +186,8 @@ export function RadarCanvas() {
       // Update progress toward center
       radarAgent.progress = Math.min(1, radarAgent.progress + speed * dt);
 
-      // Cubic Bézier motion toward center
-      // Start: rim, End: center, Control points: tangential perturbation
+      // Cubic Bézier motion toward center with tangential perturbation
+      // Start: rim, End: center, Control points: perturbed tangentially
       const cp1Angle = radarAgent.angle + Math.PI / 4;
       const cp1Dist = maxRadius * 0.6;
       const cp1X = Math.cos(cp1Angle) * cp1Dist;
@@ -189,7 +198,7 @@ export function RadarCanvas() {
       const cp2X = Math.cos(cp2Angle) * cp2Dist;
       const cp2Y = Math.sin(cp2Angle) * cp2Dist;
 
-      // Cubic Bézier interpolation
+      // Cubic Bézier interpolation with lateral noise for "life"
       const t = radarAgent.progress;
       const t1 = 1 - t;
       const t2 = t * t;
@@ -206,17 +215,53 @@ export function RadarCanvas() {
         3 * t1 * t2 * cp2Y +
         t2 * t * 0;
 
-      newAgents.set(agentId, { x, y, progress: radarAgent.progress });
+      // Add small lateral noise for life (perlin-like)
+      const noiseScale = 0.05 * (1 - t) * Math.sin(agentId.charCodeAt(0) * 0.1 + t * 10);
+      const noiseAngle = radarAgent.angle + Math.PI / 2;
+      const noiseX = x + Math.cos(noiseAngle) * noiseScale;
+      const noiseY = y + Math.sin(noiseAngle) * noiseScale;
 
-      // Draw agent (triangle arrow)
+      // Draw short fading trail (last 5 points)
+      if (radarAgent.trail.length > 0) {
+        ctx.strokeStyle = getAgentColor(agent.work_item_id);
+        for (let i = 0; i < radarAgent.trail.length; i++) {
+          const trail = radarAgent.trail[i];
+          ctx.globalAlpha = trail.alpha;
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = getAgentColor(agent.work_item_id);
+          ctx.beginPath();
+          const px = centerX + trail.x * maxRadius;
+          const py = centerY + trail.y * maxRadius;
+          ctx.arc(px, py, 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // Add current position to trail (max 5 points)
+      radarAgent.trail.push({ x: noiseX, y: noiseY, alpha: 0.6 });
+      if (radarAgent.trail.length > 5) {
+        radarAgent.trail.shift();
+      }
+      // Decay trail alpha
+      radarAgent.trail = radarAgent.trail.map((p) => ({
+        ...p,
+        alpha: p.alpha * 0.8,
+      }));
+
+      newAgents.set(agentId, { x: noiseX, y: noiseY, progress: radarAgent.progress, trail: radarAgent.trail });
+
+      // Draw agent (triangle arrow pointing toward motion)
       const color = getAgentColor(agent.work_item_id);
       ctx.fillStyle = color;
-      ctx.globalAlpha = 1 - t * 0.2; // Slight fade as approaches center
+      ctx.globalAlpha = 1 - t * 0.15; // Subtle fade as approaches center
 
       const arrowSize = 8;
-      const arrowAngle = Math.atan2(y, x);
+      const arrowAngle = Math.atan2(noiseY, noiseX);
+      const arrowX = centerX + noiseX * maxRadius;
+      const arrowY = centerY + noiseY * maxRadius;
+
       ctx.save();
-      ctx.translate(centerX + x * maxRadius, centerY + y * maxRadius);
+      ctx.translate(arrowX, arrowY);
       ctx.rotate(arrowAngle);
       ctx.beginPath();
       ctx.moveTo(arrowSize, 0);
@@ -226,16 +271,14 @@ export function RadarCanvas() {
       ctx.fill();
       ctx.restore();
 
-      // Agent label (small text, faded)
-      ctx.globalAlpha = Math.max(0.4, 1 - t * 1.5);
+      // Agent label: agent_id / work_item_id (faded with distance to center)
+      // Label distance fade: 1.0 at rim, 0.4 at center
+      ctx.globalAlpha = Math.max(0.3, 1 - t * 1.8);
       ctx.fillStyle = color;
-      ctx.font = "10px monospace";
+      ctx.font = "9px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(
-        `${agentId}`,
-        centerX + x * maxRadius,
-        centerY + y * maxRadius - 12
-      );
+      const labelText = `${agentId}/${agent.work_item_id}`;
+      ctx.fillText(labelText, arrowX, arrowY - 14);
 
       ctx.globalAlpha = 1;
 
@@ -259,39 +302,53 @@ export function RadarCanvas() {
 
     radarStateRef.current.agents = newAgents;
 
-    // Draw flares
+    // Draw flares and completion effects
     ctx.globalAlpha = 1;
     const flaresCopy = radarStateRef.current.flares.filter((flare) => {
       const elapsed = now - flare.startTime;
       if (elapsed > FLARE_DURATION_MS) return false;
 
       const progress = elapsed / FLARE_DURATION_MS;
-      const maxFlareRadius = maxRadius * 0.3;
+      const maxFlareRadius = maxRadius * 0.35;
       const flareRadius = maxFlareRadius * progress;
 
-      // Easing out
-      const easeProgress = progress * progress;
+      // Easing out: quadratic ease-out
+      const easeProgress = 1 - (1 - progress) * (1 - progress);
 
-      ctx.strokeStyle = `rgba(255, 200, 0, ${1 - easeProgress})`;
+      // Expanding ring with gradient effect
+      ctx.strokeStyle = `rgba(255, 200, 0, ${(1 - easeProgress) * 0.8})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(centerX, centerY, flareRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner glow
+      ctx.strokeStyle = `rgba(255, 220, 100, ${(1 - easeProgress) * 0.4})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, flareRadius * 0.7, 0, Math.PI * 2);
       ctx.stroke();
 
       return true;
     });
     radarStateRef.current.flares = flaresCopy;
 
-    // Tick center checkbox briefly on completion
+    // Briefly tick (fill) center checkbox during flares
     if (flaresCopy.length > 0) {
-      ctx.fillStyle = "#999999";
-      const checkboxSize = 12;
-      ctx.fillRect(
-        centerX - checkboxSize / 2,
-        centerY - checkboxSize / 2,
-        checkboxSize,
-        checkboxSize
-      );
+      const firstFlare = flaresCopy[0];
+      const elapsed = now - firstFlare.startTime;
+      const tickDuration = 100; // ms
+      if (elapsed < tickDuration) {
+        const alpha = 1 - elapsed / tickDuration;
+        ctx.fillStyle = `rgba(255, 200, 0, ${alpha * 0.4})`;
+        const checkboxSize = 14;
+        ctx.fillRect(
+          centerX - checkboxSize / 2,
+          centerY - checkboxSize / 2,
+          checkboxSize,
+          checkboxSize
+        );
+      }
     }
   };
 
