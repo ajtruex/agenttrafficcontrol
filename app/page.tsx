@@ -61,10 +61,10 @@ export default function Home() {
       {/* Radar Canvas (fullscreen background) */}
       <RadarCanvas />
 
-      {/* Overlay container with pointer-events control */}
+      {/* Overlay container */}
       <div className="absolute inset-0 pointer-events-none flex flex-col">
         {/* Header */}
-        <div className="border-terminal bg-terminal-gray-darker border-b px-6 py-4 flex items-center justify-between pointer-events-auto">
+        <div className="border-terminal bg-terminal-gray-darker border-b px-6 py-4 flex items-center justify-between pointer-events-auto h-20">
           <div>
             <h1
               className="text-xl font-bold uppercase text-terminal-amber"
@@ -91,14 +91,26 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* Metrics Bar */}
-        <div className="pointer-events-auto">
-          <MetricsBar />
-        </div>
+        {/* Main Content Grid (3-column layout) */}
+        <div className="flex flex-1 overflow-hidden gap-1 px-1 py-1">
+          {/* Left Panel: Work Items Table (30%) */}
+          <div className="w-[30%] overflow-hidden pointer-events-auto">
+            <div className="border border-terminal-gray-dark rounded bg-terminal-gray-darker/80 h-full overflow-y-auto">
+              <WorkTable />
+            </div>
+          </div>
 
-        {/* Work Items Table (scrollable) */}
-        <div className="flex-1 overflow-y-auto pointer-events-auto">
-          <WorkTable />
+          {/* Center Panel: Radar (45%) - overlay handled by canvas */}
+          <div className="w-[45%] overflow-hidden rounded border border-terminal-gray-dark">
+            {/* Radar already fullscreen, center this section visually */}
+          </div>
+
+          {/* Right Panel: Metrics (25%) */}
+          <div className="w-[25%] overflow-hidden pointer-events-auto">
+            <div className="border border-terminal-gray-dark rounded bg-terminal-gray-darker/80 h-full overflow-y-auto p-4">
+              <MetricsBar />
+            </div>
+          </div>
         </div>
       </div>
 
