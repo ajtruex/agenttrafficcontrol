@@ -6,12 +6,12 @@ import { SECTOR_COLORS } from "@/lib/constants";
 export function WorkTable() {
   const { items } = useStore();
 
-  const statusColors: Record<string, string> = {
-    queued: "bg-slate-700 text-slate-300",
-    assigned: "bg-yellow-700 text-yellow-100",
-    in_progress: "bg-blue-700 text-blue-100",
-    done: "bg-green-700 text-green-100",
-    blocked: "bg-red-700 text-red-100",
+  const statusClasses: Record<string, string> = {
+    queued: "status-queued",
+    assigned: "status-assigned",
+    in_progress: "status-in_progress",
+    done: "status-done",
+    blocked: "status-blocked",
   };
 
   const formatTime = (ms: number | undefined) => {
@@ -37,32 +37,32 @@ export function WorkTable() {
   });
 
   return (
-    <div className="flex-1 overflow-auto bg-slate-900">
-      <table className="w-full text-sm border-collapse">
-        <thead className="sticky top-0 bg-slate-800">
-          <tr className="border-b border-slate-700">
-            <th className="px-4 py-2 text-left font-semibold text-slate-300">
+    <div className="flex-1 overflow-auto bg-terminal-black border-terminal">
+      <table className="w-full text-xs border-collapse font-mono">
+        <thead className="sticky top-0 bg-terminal-gray-darker border-terminal">
+          <tr className="border-b border-terminal-gray-dark">
+            <th className="px-3 py-2 text-left font-bold text-terminal-amber uppercase">
               ID
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-slate-300">
+            <th className="px-3 py-2 text-left font-bold text-terminal-amber uppercase">
               Sector
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-slate-300">
+            <th className="px-3 py-2 text-left font-bold text-terminal-amber uppercase">
               Status
             </th>
-            <th className="px-4 py-2 text-right font-semibold text-slate-300">
-              Tokens (done/est)
+            <th className="px-3 py-2 text-right font-bold text-terminal-amber uppercase">
+              Tokens
             </th>
-            <th className="px-4 py-2 text-right font-semibold text-slate-300">
-              TPS (cur / min–max)
+            <th className="px-3 py-2 text-right font-bold text-terminal-amber uppercase">
+              TPS
             </th>
-            <th className="px-4 py-2 text-right font-semibold text-slate-300">
+            <th className="px-3 py-2 text-right font-bold text-terminal-amber uppercase">
               ETA
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-slate-300">
+            <th className="px-3 py-2 text-left font-bold text-terminal-amber uppercase">
               Deps
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-slate-300">
+            <th className="px-3 py-2 text-left font-bold text-terminal-amber uppercase">
               Agent
             </th>
           </tr>
@@ -71,46 +71,50 @@ export function WorkTable() {
           {sortedItems.map((item) => (
             <tr
               key={item.id}
-              className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
+              className="border-b border-terminal-gray-dark hover:bg-terminal-gray-darker/50 transition-colors"
             >
-              <td className="px-4 py-2 font-mono font-bold text-white">
+              <td
+                className="px-3 py-2 font-bold text-terminal-green"
+                style={{ textShadow: "0 0 6px rgba(0, 255, 0, 0.6)" }}
+              >
                 {item.id}
               </td>
-              <td className="px-4 py-2">
+              <td className="px-3 py-2">
                 <span
-                  className="px-2 py-1 rounded text-xs font-semibold"
+                  className="px-2 py-1 rounded text-xs font-semibold inline-block"
                   style={{
                     backgroundColor: SECTOR_COLORS[item.sector] || "#6B7280",
                     color: "#000",
+                    textShadow: "0 0 4px rgba(255, 255, 255, 0.3)",
                   }}
                 >
                   {item.sector}
                 </span>
               </td>
-              <td className="px-4 py-2">
+              <td className="px-3 py-2">
                 <span
-                  className={`px-2 py-1 rounded text-xs font-semibold ${
-                    statusColors[item.status]
+                  className={`px-2 py-1 rounded text-xs font-semibold inline-block ${
+                    statusClasses[item.status]
                   }`}
                 >
                   {item.status}
                 </span>
               </td>
-              <td className="px-4 py-2 text-right text-slate-400 font-mono text-xs">
+              <td className="px-3 py-2 text-right text-terminal-cyan">
                 {item.tokens_done.toFixed(0)}/{item.est_tokens.toFixed(0)}
               </td>
-              <td className="px-4 py-2 text-right text-slate-400 font-mono text-xs">
+              <td className="px-3 py-2 text-right text-terminal-gray-muted">
                 {item.tps.toFixed(1)} / {item.tps_min}–{item.tps_max}
               </td>
-              <td className="px-4 py-2 text-right text-slate-400 font-mono text-xs">
+              <td className="px-3 py-2 text-right text-terminal-amber-dark">
                 {formatTime(item.eta_ms)}
               </td>
-              <td className="px-4 py-2 text-slate-400 text-xs">
+              <td className="px-3 py-2 text-terminal-gray-text text-xs">
                 {item.depends_on.length > 0
                   ? item.depends_on.join(", ")
                   : "—"}
               </td>
-              <td className="px-4 py-2 text-slate-400 font-mono text-xs">
+              <td className="px-3 py-2 text-terminal-cyan font-bold">
                 {item.agent_id || "—"}
               </td>
             </tr>

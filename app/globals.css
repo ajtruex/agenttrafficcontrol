@@ -2,19 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
 html,
 body {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-  background: #0f172a;
-  color: #e2e8f0;
-  font-family: system-ui, -apple-system, sans-serif;
+  background: #000000;
+  color: #ffffff;
+  font-family: "JetBrains Mono", "IBM Plex Mono", "Courier New", monospace;
   overflow: hidden;
+  letter-spacing: 0.05em;
+  
+  /* Terminal noise texture effect */
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.03) 0px,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 2px
+    );
 }
 
 #__next {
   width: 100%;
   height: 100%;
+}
+
+/* Terminal glow effect utility */
+@layer components {
+  .terminal-header {
+    @apply font-bold text-amber-500 uppercase tracking-wider text-base;
+    text-shadow: 0 0 10px rgba(255, 176, 0, 0.6);
+  }
+
+  .terminal-label {
+    @apply text-xs uppercase tracking-wider text-gray-400;
+    text-shadow: 0 0 5px rgba(136, 136, 136, 0.3);
+  }
+
+  .terminal-value {
+    @apply font-bold text-white;
+  }
+
+  .terminal-accent {
+    @apply text-terminal-amber;
+  }
+
+  .status-queued {
+    @apply bg-gray-700 text-gray-200;
+  }
+
+  .status-assigned {
+    @apply bg-terminal-amber text-black;
+    text-shadow: none;
+  }
+
+  .status-in_progress {
+    @apply bg-blue-600 text-white;
+    text-shadow: 0 0 8px rgba(0, 150, 255, 0.6);
+  }
+
+  .status-done {
+    @apply bg-terminal-green text-black;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+  }
+
+  .status-blocked {
+    @apply bg-terminal-red text-white;
+    text-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+  }
+
+  .border-terminal {
+    @apply border border-terminal-gray-dark;
+    box-shadow: inset 0 0 10px rgba(255, 176, 0, 0.15);
+  }
+
+  .border-terminal-bright {
+    @apply border border-terminal-amber;
+    box-shadow: 0 0 10px rgba(255, 176, 0, 0.4);
+  }
 }

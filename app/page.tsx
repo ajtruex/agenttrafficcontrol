@@ -47,25 +47,36 @@ export default function Home() {
   };
 
   return (
-    <main className="w-full h-full flex flex-col bg-slate-900">
+    <main className="w-full h-full flex flex-col bg-terminal-black font-mono">
       {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+      <div className="border-terminal bg-terminal-gray-darker border-b px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">
-            Calming Control Room
+          <h1
+            className="text-xl font-bold uppercase text-terminal-amber"
+            style={{ textShadow: "0 0 10px rgba(255, 176, 0, 0.6)" }}
+          >
+            CALMING CONTROL ROOM
           </h1>
-          <p className="text-sm text-slate-400">Tick: {tick_id}</p>
+          <p className="text-xs text-terminal-gray-muted uppercase tracking-widest mt-1">
+            TICK: <span style={{ color: "#00FF00", textShadow: "0 0 6px rgba(0, 255, 0, 0.6)" }}>{tick_id}</span>
+          </p>
         </div>
 
         <button
           onClick={handleToggleRunning}
-          className={`px-6 py-2 rounded font-semibold transition-colors ${
+          className={`px-6 py-2 rounded font-bold uppercase tracking-wider transition-all text-xs ${
             running
-              ? "bg-red-600 hover:bg-red-700 text-white"
-              : "bg-green-600 hover:bg-green-700 text-white"
+              ? "bg-terminal-red text-white hover:bg-red-700"
+              : "bg-terminal-green text-black hover:brightness-110"
           }`}
+          style={{
+            textShadow:
+              running
+                ? "0 0 8px rgba(255, 0, 0, 0.6)"
+                : "0 0 8px rgba(0, 255, 0, 0.6)",
+          }}
         >
-          {running ? "Pause" : "Run"}
+          {running ? "PAUSE" : "RUN"}
         </button>
       </div>
 
