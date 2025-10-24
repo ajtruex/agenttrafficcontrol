@@ -2,16 +2,27 @@
 
 import { useStore } from "@/lib/store";
 import { SECTOR_COLORS } from "@/lib/constants";
+import { Badge } from "@/components/ui/badge";
 
 export function WorkTable() {
   const { items } = useStore();
 
-  const statusClasses: Record<string, string> = {
-    queued: "status-queued",
-    assigned: "status-assigned",
-    in_progress: "status-in_progress",
-    done: "status-done",
-    blocked: "status-blocked",
+  const getStatusVariant = (
+    status: string
+  ): "default" | "secondary" | "destructive" | "outline" | "cyan" => {
+    switch (status) {
+      case "assigned":
+        return "default";
+      case "in_progress":
+        return "cyan";
+      case "done":
+        return "secondary";
+      case "blocked":
+        return "destructive";
+      case "queued":
+      default:
+        return "outline";
+    }
   };
 
   const formatTime = (ms: number | undefined) => {
@@ -81,8 +92,12 @@ export function WorkTable() {
               </td>
               <td className="px-3 py-2">
                 <span
-                  className="px-2 py-1 rounded text-xs font-semibold inline-block"
                   style={{
+                    display: "inline-block",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
                     backgroundColor: SECTOR_COLORS[item.sector] || "#6B7280",
                     color: "#000",
                     textShadow: "0 0 4px rgba(255, 255, 255, 0.3)",
@@ -92,13 +107,9 @@ export function WorkTable() {
                 </span>
               </td>
               <td className="px-3 py-2">
-                <span
-                  className={`px-2 py-1 rounded text-xs font-semibold inline-block ${
-                    statusClasses[item.status]
-                  }`}
-                >
+                <Badge variant={getStatusVariant(item.status)}>
                   {item.status}
-                </span>
+                </Badge>
               </td>
               <td className="px-3 py-2 text-right text-terminal-cyan">
                 {item.tokens_done.toFixed(0)}/{item.est_tokens.toFixed(0)}

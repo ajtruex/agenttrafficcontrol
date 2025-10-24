@@ -10,8 +10,8 @@ export function MetricsBar() {
   };
 
   return (
-    <div className="border-terminal bg-terminal-gray-darker border-b">
-      <div className="grid grid-cols-6 gap-6 p-4">
+    <div className="border-terminal bg-terminal-gray-darker border-b p-3">
+      <div className="grid grid-cols-6 gap-4">
         {/* Active Agents - Green */}
         <div className="space-y-1">
           <div className="terminal-label text-terminal-green-500">

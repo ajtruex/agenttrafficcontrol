@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { WorkerTransport } from "@/lib/simBridge";
+import { Button } from "@/components/ui/button";
 import { MetricsBar } from "@/components/MetricsBar";
 import { WorkTable } from "@/components/WorkTable";
 
@@ -62,13 +63,9 @@ export default function Home() {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={handleToggleRunning}
-          className={`px-6 py-2 rounded font-bold uppercase tracking-wider transition-all text-xs ${
-            running
-              ? "bg-terminal-red text-white hover:bg-red-700"
-              : "bg-terminal-green text-black hover:brightness-110"
-          }`}
+          variant={running ? "destructive" : "secondary"}
           style={{
             textShadow:
               running
@@ -77,7 +74,7 @@ export default function Home() {
           }}
         >
           {running ? "PAUSE" : "RUN"}
-        </button>
+        </Button>
       </div>
 
       {/* Metrics Bar */}
