@@ -69,12 +69,33 @@ export const useStore = create<StoreState>((set, get) => ({
 
     // Accumulate pending updates
     const pending = state.pendingUpdates || {};
-    if (diff.items) {
-      pending.items = { ...state.items, ...diff.items };
+    
+    if (diff.items && Array.isArray(diff.items)) {
+      // diff.items is an array of partial items - merge each one
+      pending.items = { ...state.items, ...(pending.items || {}) };
+      for (const item of diff.items) {
+        if (item.id) {
+          pending.items[item.id] = {
+            ...pending.items[item.id],
+            ...item,
+          };
+        }
+      }
     }
-    if (diff.agents) {
-      pending.agents = { ...state.agents, ...diff.agents };
+    
+    if (diff.agents && Array.isArray(diff.agents)) {
+      // diff.agents is an array of partial agents - merge each one
+      pending.agents = { ...state.agents, ...(pending.agents || {}) };
+      for (const agent of diff.agents) {
+        if (agent.id) {
+          pending.agents[agent.id] = {
+            ...pending.agents[agent.id],
+            ...agent,
+          };
+        }
+      }
     }
+    
     if (diff.metrics) {
       pending.metrics = {
         ...state.metrics,
